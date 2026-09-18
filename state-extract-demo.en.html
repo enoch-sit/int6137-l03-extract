@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>L03 抽取演示 · 状态怎么更新</title>
+  <title>L03 extract demo · how state updates</title>
   <style>
     :root {
       color-scheme: light;
@@ -95,170 +95,170 @@
 </head>
 <body>
   <main class="page">
-    <p class="kicker">INT6137 L03 · 抽取演示（不是 L02 玻璃箱） · <a href="./state-extract-demo.en.html">English</a></p>
-    <h1>状态怎么更新：先聊，再抽取</h1>
-    <p class="lede">每格有<strong>名称</strong>和<strong>说明</strong>（可改，默认 <code>name</code> / <code>summary</code>）。抽取走下面这条管线：history → 抽取 POST → 填 value → 只注入已填的格 → chat POST。</p>
-    <p class="warn">密钥只放在本页，不要进 git、不要进留言板。没有 key 时「抽取」走课堂剧本，方便投影。</p>
+    <p class="kicker">INT6137 L03 · extract demo (not the L02 glass box) · <a href="./state-extract-demo.html">中文</a></p>
+    <h1>How state updates: talk first, then extract</h1>
+    <p class="lede">Each slot has a <strong>name</strong> and a <strong>description</strong> (editable; defaults <code>name</code> / <code>summary</code>). Pipeline: history → extract POST → fill values → inject filled slots only → chat POST.</p>
+    <p class="warn">Keep the key on this page. Do not commit it. With no key, Extract uses the classroom script so you can project.</p>
 
-    <section class="connect" aria-label="连接">
-      <label for="endpoint">端点</label>
+    <section class="connect" aria-label="Connection">
+      <label for="endpoint">Endpoint</label>
       <input id="endpoint" type="text" value="https://openrouter.ai/api/v1/chat/completions" />
-      <label for="apikey">密钥</label>
-      <input id="apikey" type="password" placeholder="Bearer 用的 key" autocomplete="off" />
-      <label for="model">模型</label>
+      <label for="apikey">API key</label>
+      <input id="apikey" type="password" placeholder="Bearer key" autocomplete="off" />
+      <label for="model">Model</label>
       <input id="model" type="text" value="qwen/qwen-2.5-7b-instruct" />
-      <label for="turns">这一发轮次</label>
-      <input id="turns" type="number" min="1" max="99" placeholder="全部" />
+      <label for="turns">Turns this call</label>
+      <input id="turns" type="number" min="1" max="99" placeholder="all" />
     </section>
 
     <ol class="pipe" id="pipe">
-      <li class="step" data-step="1"><b>1 · history</b>对话进记录，卡片不动</li>
-      <li class="step" data-step="2"><b>2 · 抽取 POST</b>schema 说明 + 对话；不聊天</li>
-      <li class="step" data-step="3"><b>3 · values</b>按名称填格；空的仍空</li>
-      <li class="step" data-step="4"><b>4 · inject</b>只带已填的 <code>&lt;state name&gt;</code></li>
-      <li class="step" data-step="5"><b>5 · chat POST</b>模型只看见这一发</li>
+      <li class="step" data-step="1"><b>1 · history</b>talk enters the log; the card does not move</li>
+      <li class="step" data-step="2"><b>2 · extract POST</b>schema descriptions + dialogue; not a chat turn</li>
+      <li class="step" data-step="3"><b>3 · values</b>fill by name; empty stays empty</li>
+      <li class="step" data-step="4"><b>4 · inject</b>only filled <code>&lt;state name&gt;</code></li>
+      <li class="step" data-step="5"><b>5 · chat POST</b>the model sees this request only</li>
     </ol>
 
     <div class="toolbar">
-      <button type="button" id="next">下一句</button>
-      <button type="button" id="extract">抽取</button>
-      <button type="button" class="alt" id="add-slot">加一格</button>
-      <button type="button" class="alt" id="defaults">恢复默认格</button>
-      <button type="button" class="alt" id="reset">重置对话</button>
-      <span class="beat" id="beat-label">第 0 / 6 拍 · 还没有对话</span>
+      <button type="button" id="next">Next line</button>
+      <button type="button" id="extract">Extract</button>
+      <button type="button" class="alt" id="add-slot">Add slot</button>
+      <button type="button" class="alt" id="defaults">Restore defaults</button>
+      <button type="button" class="alt" id="reset">Reset chat</button>
+      <span class="beat" id="beat-label">Beat 0 / 6 · no dialogue yet</span>
     </div>
-    <p class="hint" id="status">先填密钥再抽取 = 真 POST。空白密钥 = 剧本抽取。</p>
+    <p class="hint" id="status">Key filled = live extract POST. Empty key = scripted extract.</p>
     <p class="err" id="error"></p>
 
     <div class="grid">
       <section class="card">
         <h2>1 · history</h2>
-        <p class="hint">荧光笔 = 默认格会抽的词。寒暄不进卡片。淡的气泡 = 超出「这一发轮次」，还在记录里，但不进 POST。</p>
+        <p class="hint">Highlighter = words the default slots will extract. Small talk stays off the card. Faded bubbles sit outside “turns this call” and are not in the POST.</p>
         <div class="log" id="log"></div>
       </section>
       <section class="card">
         <h2>schema + values</h2>
-        <p class="hint">名称 = JSON 键。说明 = 告诉抽取模型这一格要什么。value 才注入。</p>
+        <p class="hint">Name = JSON key. Description tells the extract model what the slot is for. Only value is injected.</p>
         <div id="slots"></div>
-        <p class="hint" id="delta">还没抽取。value 是空的。</p>
+        <p class="hint" id="delta">No extract yet. Values are empty.</p>
       </section>
       <section class="card">
-        <h2>5 · 这一发 chat POST</h2>
-        <p class="hint">没有对应 <code>&lt;state&gt;</code> = 那一格没注入。</p>
+        <h2>5 · this call’s chat POST</h2>
+        <p class="hint">No matching <code>&lt;state&gt;</code> means that slot was not injected.</p>
         <pre id="chat-post"></pre>
       </section>
     </div>
     <div class="posts">
       <section class="card">
-        <h2>2 · 抽取 POST</h2>
-        <p class="hint">另一次请求。HTTP <span id="httpstatus">尚未请求</span>。有密钥时请求头带 <code>Authorization: Bearer</code>，密钥不进下面的 JSON。</p>
+        <h2>2 · extract POST</h2>
+        <p class="hint">A separate request. HTTP <span id="httpstatus">no request yet</span>. With a key, the header carries <code>Authorization: Bearer</code>; the key is not in the JSON below.</p>
         <pre id="extract-post"></pre>
       </section>
       <section class="card">
-        <h2>4 · 注入了什么</h2>
-        <p class="hint">每个已填的格一条。不是整份带 null 的 JSON。</p>
+        <h2>4 · what was injected</h2>
+        <p class="hint">One tag per filled slot. Not a whole JSON blob with nulls.</p>
         <pre id="injected"></pre>
       </section>
     </div>
-    <p class="note">备课：<a href="./HISTORY-STATE-MEMORY.md">HISTORY-STATE-MEMORY.md</a>。真密钥、自己打字：<a href="./state-extract-live.html">state-extract-live.html</a> · English demo: <a href="./state-extract-demo.en.html">state-extract-demo.en.html</a>。L02 玻璃箱仍是 <a href="https://enoch-sit.github.io/int6137-l02-chatbot/l02-chatbot.html">l02-chatbot.html</a>。</p>
+    <p class="note">Teacher notes: <a href="./HISTORY-STATE-MEMORY.md">HISTORY-STATE-MEMORY.md</a>. Live key page: <a href="./state-extract-live.en.html">state-extract-live.en.html</a>. L02 glass box: <a href="https://enoch-sit.github.io/int6137-l02-chatbot/l02-chatbot.en.html">l02-chatbot.en.html</a>.</p>
   </main>
   <script>
     var DEFAULT_SLOTS = [
-      { key: 'name', description: '用户怎么称呼自己。更正以最后一次为准。没说过就留空。', value: '' },
-      { key: 'summary', description: '必须记住的情节：人数、菜系、过敏、时间。寒暄不要写。更正覆盖旧值。', value: '' }
+      { key: 'name', description: 'How the user names themselves. Last correction wins. Leave empty if never said.', value: '' },
+      { key: 'summary', description: 'Plot that must be kept: party size, cuisine, allergy, time. Skip small talk. Later corrections overwrite.', value: '' }
     ];
 
     var BEATS = [
       {
-        user: '嗨，今晚想订个位子～',
-        userHtml: '嗨，今晚想订个位子～',
-        assistant: '欢迎。请问怎么称呼、几位？',
+        user: 'Hi, I’d like a table tonight~',
+        userHtml: 'Hi, I’d like a table tonight~',
+        assistant: 'Welcome. What name shall I use, and for how many?',
         values: ['', ''],
-        delta: '寒暄。抽取后仍空——空格不注入。'
+        delta: 'Small talk. After extract the card is still empty — empty slots are not injected.'
       },
       {
-        user: '我姓陈。先订两位吧。',
-        userHtml: '我姓 <mark>陈</mark>。先订 <mark>两位</mark> 吧。',
-        assistant: '陈先生，两位。想吃粤菜还是日料？',
-        values: ['陈', '订两位晚餐。'],
-        delta: '抽出称呼与情节。这一发开始带已填的格。'
+        user: 'I’m Chen. Table for two first.',
+        userHtml: 'I’m <mark>Chen</mark>. Table for <mark>two</mark> first.',
+        assistant: 'Mr Chen, two. Cantonese or Japanese?',
+        values: ['Chen', 'Dinner for two.'],
+        delta: 'Name and plot extracted. This call now carries filled slots.'
       },
       {
-        user: '日料好了。对了花生过敏，千万别花生。',
-        userHtml: '<mark>日料</mark> 好了。对了 <mark>花生过敏</mark>，千万别花生。',
-        assistant: '菜单会避开花生。要靠窗吗？',
-        values: ['陈', '陈订两位日料；花生过敏，不要花生。'],
-        delta: '称呼不变。summary 更新（日料 + 过敏）。'
+        user: 'Japanese is good. Also peanut allergy — no peanuts.',
+        userHtml: '<mark>Japanese</mark> is good. Also <mark>peanut allergy</mark> — no peanuts.',
+        assistant: 'The menu will avoid peanuts. Window seat?',
+        values: ['Chen', 'Chen, table for two, Japanese; peanut allergy, no peanuts.'],
+        delta: 'Name unchanged. summary updates (Japanese + allergy).'
       },
       {
-        user: '要靠窗。哦改成三位，小孩也来。',
-        userHtml: '要 <mark>靠窗</mark>。哦改成 <mark>三位</mark>，小孩也来。',
-        assistant: '改成三位。要儿童椅吗？',
-        values: ['陈', '陈订三位日料，靠窗；花生过敏，不要花生。'],
-        delta: '两位被更正成三位。summary 覆盖，不并排留 2 和 3。'
+        user: 'Window please. Wait, make it three — a kid is coming too.',
+        userHtml: '<mark>Window</mark> please. Wait, make it <mark>three</mark> — a kid is coming too.',
+        assistant: 'Changed to three. Highchair?',
+        values: ['Chen', 'Chen, table for three, Japanese, window; peanut allergy, no peanuts.'],
+        delta: 'Two is corrected to three. summary overwrites; it does not keep 2 and 3 side by side.'
       },
       {
-        user: '不用椅。你们店好评好像很多啊……',
-        userHtml: '<mark>不用</mark> 椅。你们店好评好像很多啊……',
-        assistant: '谢谢。今晚 7 点可以吗？',
-        values: ['陈', '陈订三位日料，靠窗，不要儿童椅；花生过敏。'],
-        delta: '「好评很多」丢掉。summary 只收「不用椅」。'
+        user: 'No chair. Your reviews seem really good…',
+        userHtml: '<mark>No</mark> chair. Your reviews seem really good…',
+        assistant: 'Thanks. 7pm tonight?',
+        values: ['Chen', 'Chen, table for three, Japanese, window, no highchair; peanut allergy.'],
+        delta: 'Drop “reviews are good.” summary only keeps “no chair.”'
       },
       {
-        user: '7 点。那我刚才说过敏了吗？',
-        userHtml: '<mark>7 点</mark>。那我刚才说过敏了吗？',
-        assistant: '说过：花生过敏，菜单会避开。今晚 7 点，三位，靠窗。',
-        values: ['陈', '陈订今晚 7 点三位日料靠窗；花生过敏，不要花生；不要儿童椅。'],
-        delta: '在考记忆。答案在卡片。把「这一发轮次」改成 2，history 里更早的过敏句就不进 POST。'
+        user: '7pm. Did I mention the allergy just now?',
+        userHtml: '<mark>7pm</mark>. Did I mention the allergy just now?',
+        assistant: 'Yes: peanut allergy; the menu will avoid it. Tonight 7pm, three, window.',
+        values: ['Chen', 'Chen, tonight 7pm, three, Japanese, window; peanut allergy, no peanuts; no highchair.'],
+        delta: 'This tests memory. The answer is on the card. Set turns-this-call to 2 and the earlier allergy line drops out of the POST.'
       },
       {
-        user: '对了停车方便吗？我们开车来。',
-        userHtml: '对了停车方便吗？我们开车来。',
-        assistant: '门口有少量车位。要我备注开车吗？',
-        values: ['陈', '陈订今晚 7 点三位日料靠窗；花生过敏，不要花生；不要儿童椅。'],
-        delta: '停车闲聊丢掉。卡片不动。'
+        user: 'Is parking easy? We’re driving.',
+        userHtml: 'Is parking easy? We’re driving.',
+        assistant: 'A few spaces out front. Note that you are driving?',
+        values: ['Chen', 'Chen, tonight 7pm, three, Japanese, window; peanut allergy, no peanuts; no highchair.'],
+        delta: 'Parking small talk is dropped. Card unchanged.'
       },
       {
-        user: '不用备注。孩子比较挑，不要生鱼。',
-        userHtml: '不用备注。孩子比较挑，<mark>不要生鱼</mark>。',
-        assistant: '好，菜单避开花生和生鱼。还需要儿童餐具吗？',
-        values: ['陈', '陈订今晚 7 点三位日料靠窗；花生过敏；不要生鱼；不要儿童椅。'],
-        delta: 'summary 加上「不要生鱼」。停车仍不写。'
+        user: 'No note. The kid is picky — no raw fish.',
+        userHtml: 'No note. The kid is picky — <mark>no raw fish</mark>.',
+        assistant: 'Menu will avoid peanuts and raw fish. Kids’ cutlery?',
+        values: ['Chen', 'Chen, tonight 7pm, three, Japanese, window; peanut allergy; no raw fish; no highchair.'],
+        delta: 'summary adds “no raw fish.” Parking still omitted.'
       },
       {
-        user: '不用餐具。你们店附近是不是有个公园？周末人很多吧。',
-        userHtml: '不用餐具。你们店附近是不是有个公园？周末人很多吧。',
-        assistant: '对，周末会更热闹。今晚还改时间吗？',
-        values: ['陈', '陈订今晚 7 点三位日料靠窗；花生过敏；不要生鱼；不要儿童椅。'],
-        delta: '公园、周末人多：丢掉。'
+        user: 'No cutlery. Is there a park nearby? Weekends get crowded, right?',
+        userHtml: 'No cutlery. Is there a park nearby? Weekends get crowded, right?',
+        assistant: 'Yes, weekends are busier. Change the time tonight?',
+        values: ['Chen', 'Chen, tonight 7pm, three, Japanese, window; peanut allergy; no raw fish; no highchair.'],
+        delta: 'Park and weekend crowds: drop.'
       },
       {
-        user: '改成 7 点半吧，地铁可能晚。',
-        userHtml: '改成 <mark>7 点半</mark> 吧，地铁可能晚。',
-        assistant: '改成 7 点半。三位，靠窗。还要别的吗？',
-        values: ['陈', '陈订今晚 7 点半三位日料靠窗；花生过敏；不要生鱼；不要儿童椅。'],
-        delta: '7 点被更正成 7 点半。summary 覆盖时间。'
+        user: 'Make it 7:30 — the MTR might run late.',
+        userHtml: 'Make it <mark>7:30</mark> — the MTR might run late.',
+        assistant: 'Changed to 7:30. Three, window. Anything else?',
+        values: ['Chen', 'Chen, tonight 7:30, three, Japanese, window; peanut allergy; no raw fish; no highchair.'],
+        delta: '7pm is corrected to 7:30. summary overwrites the time.'
       },
       {
-        user: '账单开陈。我手机 13800138000，方便的话记一下。',
-        userHtml: '账单开 <mark>陈</mark>。我手机 13800138000，方便的话记一下。',
-        assistant: '账单开陈。今晚 7 点半见。',
-        values: ['陈', '陈订今晚 7 点半三位日料靠窗；花生过敏；不要生鱼；不要儿童椅。账单开陈。'],
-        delta: '手机号不在默认说明里（人数/菜系/过敏/时间），剧本不写入。'
+        user: 'Bill under Chen. My number is 13800138000 if you want it.',
+        userHtml: 'Bill under <mark>Chen</mark>. My number is 13800138000 if you want it.',
+        assistant: 'Bill under Chen. See you at 7:30.',
+        values: ['Chen', 'Chen, tonight 7:30, three, Japanese, window; peanut allergy; no raw fish; no highchair. Bill under Chen.'],
+        delta: 'Phone is not in the default description (party/cuisine/allergy/time), so the script does not write it.'
       },
       {
-        user: '那我名字你还记得吗？还有过敏那件事。',
-        userHtml: '那我名字你还记得吗？还有过敏那件事。',
-        assistant: '陈先生。花生过敏，菜单会避开。今晚 7 点半，三位，靠窗。',
-        values: ['陈', '陈订今晚 7 点半三位日料靠窗；花生过敏；不要生鱼；不要儿童椅。账单开陈。'],
-        delta: '又在考记忆。若轮次上限很小，这一发 history 里已经没有「花生」——卡片还在。'
+        user: 'Do you still remember my name? And the allergy?',
+        userHtml: 'Do you still remember my name? And the allergy?',
+        assistant: 'Mr Chen. Peanut allergy; the menu will avoid it. Tonight 7:30, three, window.',
+        values: ['Chen', 'Chen, tonight 7:30, three, Japanese, window; peanut allergy; no raw fish; no highchair. Bill under Chen.'],
+        delta: 'Memory test again. If the turn cap is small, this call’s history no longer has “peanut” — the card still does.'
       },
       {
-        user: '好，就这样。到时候三位靠窗。',
-        userHtml: '好，就这样。到时候 <mark>三位</mark> <mark>靠窗</mark>。',
-        assistant: '记下了。陈先生，今晚 7 点半，三位靠窗。',
-        values: ['陈', '陈订今晚 7 点半三位日料靠窗；花生过敏；不要生鱼；不要儿童椅。账单开陈。'],
-        delta: '收束。把轮次上限拧小，看 POST 丢掉哪几句、卡片还留什么。'
+        user: 'That’s it. Three at a window when we arrive.',
+        userHtml: 'That’s it. <mark>Three</mark> at a <mark>window</mark> when we arrive.',
+        assistant: 'Noted. Mr Chen, tonight 7:30, three at a window.',
+        values: ['Chen', 'Chen, tonight 7:30, three, Japanese, window; peanut allergy; no raw fish; no highchair. Bill under Chen.'],
+        delta: 'Close. Shrink the turn cap and watch which lines leave the POST while the card keeps the facts.'
       }
     ];
 
@@ -321,7 +321,7 @@
     }
 
     function chatMessages() {
-      var sys = '你是订位助手。回答简短。';
+      var sys = 'You are a reservation assistant. Keep answers short.';
       var block = injectXml();
       if (block) sys += '\n' + block;
       var list = [{ role: 'system', content: sys }];
@@ -334,8 +334,8 @@
 
     function extractMessages() {
       var shape = shapeText();
-      var sys = '你只做抽取。不要聊天。按名称把整张卡片重写。说明告诉你每一格要什么。没出现的槽位留空。更正以最后一次为准。不要编造。只输出卡片正文，每行 key: value。\n\n结构：\n' + shape + '\n\n说明：\n' + schemaText();
-      var user = '当前卡片：\n' + cardText() + '\n\n对话记录：\n' + (transcript() || '（空）');
+      var sys = 'Extract only. Do not chat. Rewrite the whole card by slot name. The descriptions say what each slot is for. Leave missing slots empty. Last correction wins. Do not invent. Output card text only, one key: value per line.\n\nShape:\n' + shape + '\n\nDescriptions:\n' + schemaText();
+      var user = 'Current card:\n' + cardText() + '\n\nTranscript:\n' + (transcript() || '(empty)');
       return [
         { role: 'system', content: sys },
         { role: 'user', content: user }
@@ -367,16 +367,16 @@
       var log = $('log');
       log.innerHTML = '';
       if (!spoken) {
-        log.innerHTML = '<p class="empty">还没有句子。</p>';
+        log.innerHTML = '<p class="empty">No sentences yet.</p>';
         return;
       }
       for (var i = 0; i < spoken; i++) {
         var u = document.createElement('div');
         u.className = 'bubble user';
-        u.innerHTML = '<span class="who">同学</span>' + BEATS[i].userHtml;
+        u.innerHTML = '<span class="who">Student</span>' + BEATS[i].userHtml;
         var a = document.createElement('div');
         a.className = 'bubble bot';
-        a.innerHTML = '<span class="who">店员</span>' + BEATS[i].assistant;
+        a.innerHTML = '<span class="who">Host</span>' + BEATS[i].assistant;
         log.appendChild(u);
         log.appendChild(a);
       }
@@ -404,9 +404,9 @@
         if (prevValues && String(prevValues[i] || '') !== String(s.value || '')) wrap.className += ' changed';
         wrap.setAttribute('data-i', String(i));
         wrap.innerHTML =
-          '<div class="row"><label>名称</label><input data-f="key" spellcheck="false" /></div>' +
-          '<div class="row"><label>说明</label><textarea data-f="description" rows="2"></textarea></div>' +
-          '<div class="row"><label>value</label><textarea data-f="value" rows="2" placeholder="（空 = 这一发不带）"></textarea></div>';
+          '<div class="row"><label>name</label><input data-f="key" spellcheck="false" /></div>' +
+          '<div class="row"><label>about</label><textarea data-f="description" rows="2"></textarea></div>' +
+          '<div class="row"><label>value</label><textarea data-f="value" rows="2" placeholder="(empty = omit from this call)"></textarea></div>';
         wrap.querySelector('[data-f="key"]').value = s.key;
         wrap.querySelector('[data-f="description"]').value = s.description;
         wrap.querySelector('[data-f="value"]').value = s.value;
@@ -427,15 +427,15 @@
       }, null, 2);
       $('extract-post').textContent = spoken
         ? JSON.stringify(extractBody(), null, 2)
-        : '（先有对话再抽取。这次请求不会出现在气泡里。）';
+        : '(Talk first, then Extract. This request does not appear as a bubble.)';
       var xml = injectXml();
-      $('injected').textContent = xml || '（没有已填的格 → 这一发不带 <state>。空 JSON / null 也不会注入。）';
+      $('injected').textContent = xml || '(no filled slots → this call has no <state>. Empty JSON / null is not injected either.)';
     }
 
     function paintChrome() {
       $('beat-label').textContent = spoken
-        ? ('第 ' + spoken + ' / ' + BEATS.length + ' 拍 · 对话在 history 里')
-        : ('第 0 / ' + BEATS.length + ' 拍 · 还没有对话');
+        ? ('Beat ' + spoken + ' / ' + BEATS.length + ' · dialogue is in history')
+        : ('Beat 0 / ' + BEATS.length + ' · no dialogue yet');
       $('next').disabled = spoken >= BEATS.length;
       $('extract').disabled = spoken === 0;
     }
@@ -454,7 +454,7 @@
         slots[i].value = vals[i] != null ? vals[i] : slots[i].value;
       }
       $('delta').textContent = BEATS[spoken - 1].delta;
-      $('httpstatus').textContent = '剧本（无 key）';
+      $('httpstatus').textContent = 'scripted (no key)';
       setPipe(5);
       paint(prev);
     }
@@ -485,8 +485,8 @@
       if (spoken >= BEATS.length) return;
       spoken += 1;
       showError('');
-      $('status').textContent = '句子已经进 history。卡片还没动。下一步是抽取 POST。';
-      $('delta').textContent = 'history 变了，values 还停在抽取前。';
+      $('status').textContent = 'The line is in history. The card has not moved. Next is extract POST.';
+      $('delta').textContent = 'history changed. values still sit where they were before extract.';
       setPipe(1);
       paint(null);
     };
@@ -497,7 +497,7 @@
 
     $('add-slot').onclick = function () {
       readSlotsFromDom();
-      slots.push({ key: 'slot' + (slots.length + 1), description: '从对话抽出这一格。没出现就留空。', value: '' });
+      slots.push({ key: 'slot' + (slots.length + 1), description: 'Extract this slot from the dialogue. Leave empty if it never appears.', value: '' });
       paint(null);
     };
 
@@ -513,9 +513,9 @@
       spoken = 0;
       slots.forEach(function (s) { s.value = ''; });
       showError('');
-      $('status').textContent = '对话已清空。schema 还在。点「下一句」或「恢复默认格」。';
-      $('delta').textContent = '还没抽取。value 是空的。';
-      $('httpstatus').textContent = '尚未请求';
+      $('status').textContent = 'Chat cleared. Schema remains. Click Next line or Restore defaults.';
+      $('delta').textContent = 'No extract yet. Values are empty.';
+      $('httpstatus').textContent = 'no request yet';
       setPipe(0);
       paint(null);
     };
@@ -530,11 +530,11 @@
       var key = $('apikey').value.trim();
       if (!key || !endpoint) {
         applyScripted();
-        $('status').textContent = '没有密钥或端点：用了剧本抽取。填上即可走真 POST。';
+        $('status').textContent = 'No key or endpoint: used the classroom script. Fill them to run a live POST.';
         return;
       }
       $('extract').disabled = true;
-      $('httpstatus').textContent = '请求中…';
+      $('httpstatus').textContent = 'requesting…';
       try {
         var bodyObj = extractBody();
         $('extract-post').textContent = JSON.stringify(bodyObj, null, 2);
@@ -546,11 +546,11 @@
           },
           body: JSON.stringify(bodyObj)
         });
-        $('httpstatus').textContent = '抽取 HTTP ' + res.status;
+        $('httpstatus').textContent = 'extract HTTP ' + res.status;
         var raw = await res.text();
         var data;
         try { data = JSON.parse(raw); } catch (err) {
-          throw new Error('响应不是 JSON：' + raw.slice(0, 180));
+          throw new Error('Response is not JSON: ' + raw.slice(0, 180));
         }
         if (data && data.error) {
           throw new Error(data.error.message || JSON.stringify(data.error));
@@ -563,17 +563,17 @@
           : (data.output_text || '');
         var prev = slots.map(function (s) { return s.value; });
         parseExtracted(content);
-        $('delta').textContent = '真抽取完成。没有新气泡。看哪一格的 value 变了。';
-        $('status').textContent = '抽取 POST 已返回。chat POST 只带已填的格。';
+        $('delta').textContent = 'Live extract done. No new bubble. Watch which slot values changed.';
+        $('status').textContent = 'extract POST returned. chat POST carries filled slots only.';
         setPipe(5);
         paint(prev);
       } catch (err) {
         var msg = String(err && err.message ? err.message : err);
         if (/Failed to fetch|NetworkError|CORS/i.test(msg)) {
-          msg = '网络/CORS 失败：端点必须允许浏览器跨域，或改用课程 proxy。';
+          msg = 'Network/CORS failed: the endpoint must allow browser CORS, or use the course proxy.';
         }
         showError(msg);
-        $('httpstatus').textContent = '请求失败';
+        $('httpstatus').textContent = 'request failed';
         setPipe(2);
       } finally {
         $('extract').disabled = spoken === 0;

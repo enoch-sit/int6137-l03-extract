@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>L03 真抽取 · 全靠密钥</title>
+  <title>L03 live extract · key required</title>
   <style>
     :root {
       color-scheme: light;
@@ -97,81 +97,81 @@
 </head>
 <body>
   <main class="page">
-    <p class="kicker">INT6137 L03 · 真抽取（不是剧本页，也不是 L02 玻璃箱） · <a href="./state-extract-live.en.html">English</a></p>
-    <h1>全靠密钥：你打字，模型聊，模型抽</h1>
-    <p class="lede">没有课堂剧本。发送和抽取都走端点。荧光笔只在抽取之后出现：卡片 value 若在同学原句里出现，才标黄。</p>
-    <p class="warn">必须填密钥和端点，否则按钮是灰的。密钥只放本页，不要进 git。</p>
+    <p class="kicker">INT6137 L03 · live extract (not the scripted page, not the L02 glass box) · <a href="./state-extract-live.html">中文</a></p>
+    <h1>Key required: you type, the model chats, the model extracts</h1>
+    <p class="lede">No classroom script. Send and Extract both hit the endpoint. Highlighter appears only after extract: a slot value is marked if it occurs in the student’s own sentence.</p>
+    <p class="warn">Endpoint and API key are required or the buttons stay disabled. Keep the key on this page only. Do not commit it.</p>
 
-    <section class="connect" aria-label="连接">
-      <label for="endpoint">端点</label>
+    <section class="connect" aria-label="Connection">
+      <label for="endpoint">Endpoint</label>
       <input id="endpoint" type="text" value="https://openrouter.ai/api/v1/chat/completions" />
-      <label for="apikey">密钥</label>
-      <input id="apikey" type="password" placeholder="必填 · Bearer 用的 key" autocomplete="off" />
-      <label for="model">模型</label>
+      <label for="apikey">API key</label>
+      <input id="apikey" type="password" placeholder="Required · Bearer key" autocomplete="off" />
+      <label for="model">Model</label>
       <input id="model" type="text" value="qwen/qwen-2.5-7b-instruct" />
-      <label for="turns">这一发轮次</label>
-      <input id="turns" type="number" min="1" max="99" placeholder="全部" />
+      <label for="turns">Turns this call</label>
+      <input id="turns" type="number" min="1" max="99" placeholder="all" />
     </section>
 
     <ol class="pipe" id="pipe">
-      <li class="step" data-step="1"><b>1 · history</b>你打的字进记录，卡片不动</li>
-      <li class="step" data-step="2"><b>2 · 抽取 POST</b>schema 说明 + 对话；不聊天</li>
-      <li class="step" data-step="3"><b>3 · values</b>模型按名称填格</li>
-      <li class="step" data-step="4"><b>4 · inject</b>只带已填的 <code>&lt;state name&gt;</code></li>
-      <li class="step" data-step="5"><b>5 · chat POST</b>模型只看见这一发</li>
+      <li class="step" data-step="1"><b>1 · history</b>Your text enters the log. The card does not move.</li>
+      <li class="step" data-step="2"><b>2 · extract POST</b>schema descriptions + dialogue; not a chat turn</li>
+      <li class="step" data-step="3"><b>3 · values</b>the model fills slots by name</li>
+      <li class="step" data-step="4"><b>4 · inject</b>only filled <code>&lt;state name&gt;</code> tags</li>
+      <li class="step" data-step="5"><b>5 · chat POST</b>the model sees this request only</li>
     </ol>
 
     <div class="toolbar">
-      <button type="button" id="extract">抽取</button>
-      <button type="button" class="alt" id="add-slot">加一格</button>
-      <button type="button" class="alt" id="defaults">恢复默认格</button>
-      <button type="button" class="alt" id="reset">重置对话</button>
-      <span class="beat" id="beat-label">0 轮 · 需要密钥</span>
+      <button type="button" id="extract">Extract</button>
+      <button type="button" class="alt" id="add-slot">Add slot</button>
+      <button type="button" class="alt" id="defaults">Restore defaults</button>
+      <button type="button" class="alt" id="reset">Reset chat</button>
+      <span class="beat" id="beat-label">0 turns · key required</span>
     </div>
-    <p class="hint" id="status">填密钥后：先在下面打字发送，再点抽取。两次都是真 POST。</p>
+    <p class="hint" id="status">With a key: type below and send, then Extract. Both are real POSTs.</p>
     <p class="err" id="error"></p>
 
     <div class="grid">
       <section class="card history">
         <h2>1 · history</h2>
-        <p class="hint">黄标 = 抽取后的 value 在原句里对上了。淡的气泡 = 超出轮次上限，不进 POST。</p>
+        <p class="hint">Yellow = extracted value matched the student’s sentence. Faded bubbles sit outside the turn window and are not in this POST.</p>
         <div class="log" id="log"></div>
         <div class="composer">
-          <label class="hint" for="composer">同学说</label>
-          <textarea id="composer" rows="3" placeholder="例如：我姓陈。先订两位。"></textarea>
-          <button type="button" id="send">发送（chat POST）</button>
+          <label class="hint" for="composer">Student says</label>
+          <textarea id="composer" rows="3" placeholder="e.g. I’m Chen. Table for two."></textarea>
+          <button type="button" id="send">Send (chat POST)</button>
         </div>
       </section>
       <section class="card">
         <h2>schema + values</h2>
-        <p class="hint">名称和说明可改。value 由抽取模型写，不是剧本。</p>
+        <p class="hint">Name and description are editable. Values come from the extract model, not a script.</p>
         <div id="slots"></div>
-        <p class="hint" id="delta">还没抽取。value 是空的。</p>
+        <p class="hint" id="delta">No extract yet. Values are empty.</p>
       </section>
       <section class="card">
-        <h2>5 · 这一发 chat POST</h2>
-        <p class="hint">没有对应 <code>&lt;state&gt;</code> = 那一格没注入。</p>
+        <h2>5 · this call’s chat POST</h2>
+        <p class="hint">No matching <code>&lt;state&gt;</code> means that slot was not injected.</p>
         <pre id="chat-post"></pre>
       </section>
     </div>
     <div class="posts">
       <section class="card">
-        <h2>2 · 抽取 POST</h2>
-        <p class="hint">另一次请求。HTTP <span id="httpstatus">尚未请求</span>。请求头带 <code>Authorization: Bearer</code>，密钥不进 JSON。</p>
+        <h2>2 · extract POST</h2>
+        <p class="hint">A separate request. HTTP <span id="httpstatus">no request yet</span>. Header carries <code>Authorization: Bearer</code>; the key is not in the JSON.</p>
         <pre id="extract-post"></pre>
       </section>
       <section class="card">
-        <h2>4 · 注入了什么</h2>
-        <p class="hint">每个已填的格一条。不是整份带 null 的 JSON。</p>
+        <h2>4 · what was injected</h2>
+        <p class="hint">One tag per filled slot. Not a whole JSON blob with nulls.</p>
         <pre id="injected"></pre>
       </section>
     </div>
-    <p class="note">剧本投影页：<a href="./state-extract-demo.html">state-extract-demo.html</a> · English live: <a href="./state-extract-live.en.html">state-extract-live.en.html</a>。备课：<a href="./HISTORY-STATE-MEMORY.md">HISTORY-STATE-MEMORY.md</a>。L02 玻璃箱：<a href="https://enoch-sit.github.io/int6137-l02-chatbot/l02-chatbot.html">l02-chatbot.html</a>。</p>
+    <p class="note">Scripted projector: <a href="./state-extract-demo.en.html">state-extract-demo.en.html</a>. Teacher notes: <a href="./HISTORY-STATE-MEMORY.md">HISTORY-STATE-MEMORY.md</a>. L02 glass box: <a href="https://enoch-sit.github.io/int6137-l02-chatbot/l02-chatbot.en.html">l02-chatbot.en.html</a>.</p>
   </main>
   <script>
     var DEFAULT_SLOTS = [
-      { key: 'name', description: '用户怎么称呼自己。更正以最后一次为准。没说过就留空。', value: '' },
-      { key: 'summary', description: '必须记住的情节：人数、菜系、过敏、时间。寒暄不要写。更正覆盖旧值。', value: '' }
+      { key: 'name', description: 'How the user names themselves. Last correction wins. Leave empty if never said.', value: '' },
+      { key: 'summary', description: 'Plot that must be kept: party size, cuisine, allergy, time. Skip small talk. Later corrections overwrite.', value: '' }
     ];
 
     var msgs = [];
@@ -262,23 +262,23 @@
 
     function transcript() {
       var slice = windowedHistory();
-      if (!slice.length) return '（空）';
+      if (!slice.length) return '(empty)';
       var lines = slice.map(function (m) { return m.role + ': ' + m.content; });
       var dropped = droppedCount();
-      if (dropped) lines.unshift('（更早的 ' + dropped + ' 轮不在这一发）');
+      if (dropped) lines.unshift('(earlier ' + dropped + ' turns are not in this call)');
       return lines.join('\n');
     }
 
     function chatMessages() {
-      var sys = '你是订位助手。用中文简短回答。只根据这一发里的 messages 和 <state> 回答。不要假装记得没注入、也没出现在这一发里的事。';
+      var sys = 'You are a reservation assistant. Answer briefly in English. Use only the messages and <state> in this call. Do not pretend to remember facts that were not injected and do not appear in this call.';
       var block = injectXml();
       if (block) sys += '\n' + block;
       return [{ role: 'system', content: sys }].concat(windowedHistory());
     }
 
     function extractMessages() {
-      var sys = '你只做抽取。不要聊天。按名称把整张卡片重写。说明告诉你每一格要什么。没出现的槽位留空。更正以最后一次为准。不要编造。只输出卡片正文，每行 key: value。\n\n结构：\n' + shapeText() + '\n\n说明：\n' + schemaText();
-      var user = '当前卡片：\n' + cardText() + '\n\n对话记录：\n' + transcript();
+      var sys = 'Extract only. Do not chat. Rewrite the whole card by slot name. The descriptions say what each slot is for. Leave missing slots empty. Last correction wins. Do not invent. Output card text only, one key: value per line.\n\nShape:\n' + shapeText() + '\n\nDescriptions:\n' + schemaText();
+      var user = 'Current card:\n' + cardText() + '\n\nTranscript:\n' + transcript();
       return [
         { role: 'system', content: sys },
         { role: 'user', content: user }
@@ -340,7 +340,7 @@
       var log = $('log');
       log.innerHTML = '';
       if (!msgs.length) {
-        log.innerHTML = '<p class="empty">还没有句子。填密钥，在下面打字发送。</p>';
+        log.innerHTML = '<p class="empty">No sentences yet. Fill the key, then type below and send.</p>';
         return;
       }
       var keep = windowedHistory();
@@ -350,13 +350,13 @@
         if (!cutDone && keepStart > 0 && i === keepStart) {
           var cut = document.createElement('p');
           cut.className = 'cut';
-          cut.textContent = '↑ 以上不进这一发 · 下面才进 POST';
+          cut.textContent = '↑ above is not in this call · below goes in the POST';
           log.appendChild(cut);
           cutDone = true;
         }
         var el = document.createElement('div');
         el.className = 'bubble ' + (m.role === 'user' ? 'user' : 'bot') + (i < keepStart ? ' dropped' : '');
-        var who = m.role === 'user' ? '同学' : '店员';
+        var who = m.role === 'user' ? 'Student' : 'Host';
         var body = m.role === 'user' ? highlightHtml(m.content) : escapeHtml(m.content);
         el.innerHTML = '<span class="who">' + who + '</span>' + body;
         log.appendChild(el);
@@ -385,9 +385,9 @@
         wrap.className = 'slot';
         if (prevValues && String(prevValues[i] || '') !== String(s.value || '')) wrap.className += ' changed';
         wrap.innerHTML =
-          '<div class="row"><label>名称</label><input data-f="key" spellcheck="false" /></div>' +
-          '<div class="row"><label>说明</label><textarea data-f="description" rows="2"></textarea></div>' +
-          '<div class="row"><label>value</label><textarea data-f="value" rows="2" placeholder="（空 = 这一发不带）"></textarea></div>';
+          '<div class="row"><label>name</label><input data-f="key" spellcheck="false" /></div>' +
+          '<div class="row"><label>about</label><textarea data-f="description" rows="2"></textarea></div>' +
+          '<div class="row"><label>value</label><textarea data-f="value" rows="2" placeholder="(empty = omit from this call)"></textarea></div>';
         wrap.querySelector('[data-f="key"]').value = s.key;
         wrap.querySelector('[data-f="description"]').value = s.description;
         wrap.querySelector('[data-f="value"]').value = s.value;
@@ -406,17 +406,17 @@
       $('chat-post').textContent = JSON.stringify(chatBody(), null, 2);
       $('extract-post').textContent = msgs.length
         ? JSON.stringify(extractBody(), null, 2)
-        : '（先发送一句再抽取。这次请求不会出现在气泡里。）';
+        : '(Send a line first, then Extract. This request does not appear as a bubble.)';
       var xml = injectXml();
-      $('injected').textContent = xml || '（没有已填的格 → 这一发不带 <state>。）';
+      $('injected').textContent = xml || '(no filled slots → this call has no <state>.)';
     }
 
     function paintChrome() {
       var n = turnCount();
       var auth = hasAuth();
       $('beat-label').textContent = auth
-        ? (n + ' 轮 · 这一发 ' + windowSize() + ' 轮')
-        : (n + ' 轮 · 需要密钥');
+        ? (n + ' turns · this call ' + windowSize() + ' turns')
+        : (n + ' turns · key required');
       $('send').disabled = busy || !auth;
       $('extract').disabled = busy || !auth || !msgs.length;
     }
@@ -466,7 +466,7 @@
       var raw = await res.text();
       var data;
       try { data = JSON.parse(raw); } catch (err) {
-        throw new Error('响应不是 JSON：' + raw.slice(0, 180));
+        throw new Error('Response is not JSON: ' + raw.slice(0, 180));
       }
       if (data && data.error) {
         throw new Error(data.error.message || JSON.stringify(data.error));
@@ -489,15 +489,15 @@
       paint(null);
       busy = true;
       paintChrome();
-      $('httpstatus').textContent = 'chat 请求中…';
+      $('httpstatus').textContent = 'chat request…';
       try {
         setPipe(5);
         paintPosts();
         var out = await postJson(chatBody());
         $('httpstatus').textContent = 'chat HTTP ' + out.res.status;
-        msgs.push({ role: 'assistant', content: assistantContent(out.data) || '（空回复）' });
-        $('status').textContent = 'chat POST 已返回。卡片还没动，除非你再点抽取。';
-        $('delta').textContent = 'history 变了，values 还停在抽取前。';
+        msgs.push({ role: 'assistant', content: assistantContent(out.data) || '(empty reply)' });
+        $('status').textContent = 'chat POST returned. The card did not move unless you Extract.';
+        $('delta').textContent = 'history changed. values still sit where they were before extract.';
         paint(null);
       } catch (err) {
         msgs.pop();
@@ -517,14 +517,14 @@
       paintPosts();
       busy = true;
       paintChrome();
-      $('httpstatus').textContent = '抽取请求中…';
+      $('httpstatus').textContent = 'extract request…';
       try {
         var out = await postJson(extractBody());
-        $('httpstatus').textContent = '抽取 HTTP ' + out.res.status;
+        $('httpstatus').textContent = 'extract HTTP ' + out.res.status;
         var prev = slots.map(function (s) { return s.value; });
         parseExtracted(assistantContent(out.data));
-        $('delta').textContent = '真抽取完成。没有新气泡。黄标 = value 在同学原句里对上了。';
-        $('status').textContent = '抽取 POST 已返回。下一发 chat 只带已填的格。';
+        $('delta').textContent = 'Live extract done. No new bubble. Yellow = value matched the student’s sentence.';
+        $('status').textContent = 'extract POST returned. The next chat call carries filled slots only.';
         setPipe(5);
         paint(prev);
       } catch (err) {
@@ -539,10 +539,10 @@
     function failNet(err) {
       var msg = String(err && err.message ? err.message : err);
       if (/Failed to fetch|NetworkError|CORS/i.test(msg)) {
-        msg = '网络/CORS 失败：端点必须允许浏览器跨域。OpenRouter 一般可以。没有剧本可退。';
+        msg = 'Network/CORS failed: the endpoint must allow browser CORS. OpenRouter usually works. There is no scripted fallback.';
       }
       showError(msg);
-      $('httpstatus').textContent = '请求失败';
+      $('httpstatus').textContent = 'request failed';
     }
 
     $('send').onclick = function () { sendNow(); };
@@ -556,7 +556,7 @@
 
     $('add-slot').onclick = function () {
       readSlotsFromDom();
-      slots.push({ key: 'slot' + (slots.length + 1), description: '从对话抽出这一格。没出现就留空。', value: '' });
+      slots.push({ key: 'slot' + (slots.length + 1), description: 'Extract this slot from the dialogue. Leave empty if it never appears.', value: '' });
       paint(null);
     };
 
@@ -572,9 +572,9 @@
       msgs = [];
       slots.forEach(function (s) { s.value = ''; });
       showError('');
-      $('status').textContent = '对话已清空。schema 还在。密钥还在。';
-      $('delta').textContent = '还没抽取。value 是空的。';
-      $('httpstatus').textContent = '尚未请求';
+      $('status').textContent = 'Chat cleared. Schema remains. Key remains.';
+      $('delta').textContent = 'No extract yet. Values are empty.';
+      $('httpstatus').textContent = 'no request yet';
       setPipe(0);
       paint(null);
     };

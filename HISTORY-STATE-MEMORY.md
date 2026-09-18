@@ -3,7 +3,7 @@
 **读者：** 教师备课笔记。不发给学生。口吻按课堂，方便以后贴进 L03 PPT。  
 **日期：** 2026-09-17（检索）· 第 3 周备课  
 **对照：** [`../INT6137-L02/INT6137-L02.md`](../INT6137-L02/INT6137-L02.md) · L02 玻璃箱 [`https://enoch-sit.github.io/int6137-l02-chatbot/l02-chatbot.html`](https://enoch-sit.github.io/int6137-l02-chatbot/l02-chatbot.html) · **抽取演示（剧本）：** [`state-extract-demo.html`](./state-extract-demo.html) · **真抽取（全靠密钥）：** [`state-extract-live.html`](./state-extract-live.html)  
-**公开页：** [真抽取](https://enoch-sit.github.io/int6137-l03-extract/state-extract-live.html) · [剧本](https://enoch-sit.github.io/int6137-l03-extract/state-extract-demo.html)  
+**公开页：** [真抽取](https://enoch-sit.github.io/int6137-l03-extract/state-extract-live.html) · [剧本](https://enoch-sit.github.io/int6137-l03-extract/state-extract-demo.html) · [English live](https://enoch-sit.github.io/int6137-l03-extract/state-extract-live.en.html) · [English scripted](https://enoch-sit.github.io/int6137-l03-extract/state-extract-demo.en.html)  
 **本周课堂钟点仍是：** [`timeline-L03.md`](./timeline-L03.md)（Tavily / 翻译工作流）。本文件不改星期六跑场。
 
 若只记得一句：**磁盘上的记录不是这一发。这一发不是记忆。摘要只是有损的代替。**
@@ -22,6 +22,7 @@
 | `#clipboard`（状态） | 状态 | state | 本线程你不肯丢的事实。普通文本即可，不必是 JSON。这一发可以拷进 POST。 |
 | L03 [`state-extract-demo.html`](./state-extract-demo.html) | 抽取演示（剧本） | extract | **另一页。** 下一句走写好的订位；空白密钥也填卡片。不要和十五变量玻璃箱混在一页。 |
 | L03 [`state-extract-live.html`](./state-extract-live.html) | 真抽取 | extract (live) | **再一页。** 必须有密钥。你打字 → chat POST；抽取 → 第二次 POST。没有剧本。黄标只在 value 对上原句时出现。 |
+| L03 [`state-extract-live.en.html`](./state-extract-live.en.html) / [`state-extract-demo.en.html`](./state-extract-demo.en.html) | English class | extract (en) | Same two pages in English. Same IDs and pipeline. Booking example uses Chen / two → three. |
 | 视窗策略「摘要 / 混合」 | 占位摘要 | summary（占位） | `【摘要·占位】` 只演示**槽位**。它不是真的摘要，更不是记忆。 |
 | 页面里的 JS `state` | 应用状态 | — | 整页控件的对象。课上不要叫「记忆」。 |
 
