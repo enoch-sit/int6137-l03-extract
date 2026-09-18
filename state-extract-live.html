@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>L03 真抽取 · 全靠密钥</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --cream:#fbf7f1; --ink:#1c2b22; --eucalyptus:#3d6b4f; --amber:#e8a838;
+      --mist:#e8ece9; --white:#fff; --coral:#f06449; --muted:#5a6b62;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font:14px/1.45 system-ui,sans-serif; background:var(--cream); color:var(--ink); }
+    .page { max-width:1280px; margin:0 auto; padding:16px 16px 48px; display:flex; flex-direction:column; gap:12px; }
+    .kicker { margin:0; font-size:12px; font-weight:650; color:var(--eucalyptus); }
+    h1 { margin:4px 0 0; font-size:20px; font-weight:650; }
+    .lede { margin:0; font-size:13px; color:var(--muted); }
+    .warn { margin:0; font-size:12px; background:rgba(232,168,56,.28); padding:8px 12px; border-radius:10px; }
+    .err { margin:0; font-size:12px; color:var(--coral); min-height:1.2em; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    button {
+      font:inherit; font-weight:650; border:0; border-radius:8px;
+      padding:8px 12px; background:#1c2b22; color:#fff; cursor:pointer;
+    }
+    button.alt { background:var(--mist); color:var(--ink); }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .beat { font-size:13px; font-weight:650; color:var(--eucalyptus); }
+    .connect {
+      display:grid; gap:8px 10px;
+      grid-template-columns:7rem 1fr;
+      align-items:center;
+      background:var(--white); border:1px solid var(--mist); border-radius:12px; padding:12px;
+    }
+    .connect label { font-size:12px; font-weight:650; }
+    .connect input, .composer textarea {
+      width:100%; font:inherit; padding:7px 8px; border:1px solid var(--mist); border-radius:8px;
+    }
+    .pipe {
+      display:flex; flex-wrap:wrap; gap:6px; align-items:stretch;
+      list-style:none; margin:0;
+      background:var(--white); border:1px solid var(--mist); border-radius:12px; padding:10px;
+    }
+    .pipe .step {
+      flex:1; min-width:8.5rem; border:1px dashed var(--mist); border-radius:10px;
+      padding:8px; font-size:12px;
+    }
+    .pipe .step.on { border-color:var(--eucalyptus); background:#e8f0ea; }
+    .pipe .step b { display:block; color:var(--eucalyptus); font-size:11px; }
+    .grid { display:grid; gap:12px; grid-template-columns:1fr; align-items:start; }
+    @media (min-width:960px) { .grid { grid-template-columns:1.05fr 1.1fr 1fr; } }
+    .card {
+      background:var(--white); border:1px solid var(--mist); border-radius:12px;
+      padding:12px; min-width:0; display:flex; flex-direction:column; gap:8px;
+    }
+    .card.history { height:420px; max-height:420px; overflow:hidden; }
+    .card h2 { margin:0; font-size:13px; font-weight:650; color:var(--eucalyptus); flex-shrink:0; }
+    .hint { margin:0; font-size:12px; color:var(--muted); flex-shrink:0; }
+    .log {
+      display:flex; flex-direction:column; gap:8px;
+      flex:1 1 auto; min-height:0;
+      overflow-y:auto; overscroll-behavior:contain;
+      padding-right:4px;
+    }
+    .bubble { border-radius:10px; padding:8px 10px; font-size:13px; max-width:92%; flex-shrink:0; }
+    .bubble.user { background:#e8f0ea; align-self:flex-end; }
+    .bubble.bot { background:var(--cream); border:1px solid var(--mist); }
+    .bubble.dropped { opacity:.42; }
+    .bubble .who { display:block; font-size:11px; font-weight:650; color:var(--eucalyptus); margin-bottom:2px; }
+    .cut {
+      margin:4px 0; padding:6px 8px; text-align:center; font-size:11px; font-weight:650;
+      color:var(--muted); background:var(--mist); border-radius:8px; flex-shrink:0;
+    }
+    mark { background:#ffe08a; color:inherit; padding:0 2px; border-radius:3px; }
+    .composer { display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
+    .composer textarea { min-height:64px; resize:vertical; font:inherit; }
+    .slot {
+      border:1px solid var(--mist); border-radius:10px; padding:8px;
+      display:grid; gap:6px; background:var(--cream);
+    }
+    .slot.changed { animation: flash 1.1s ease; }
+    @keyframes flash { from { background:#d7efe0; } to { background:var(--cream); } }
+    .slot .row { display:grid; grid-template-columns:4.2rem 1fr; gap:6px; align-items:center; }
+    .slot .row label { font-size:12px; font-weight:650; }
+    .slot input, .slot textarea, textarea, pre, .connect input {
+      font:12px/1.4 ui-monospace, Consolas, monospace;
+      border:1px solid var(--mist); border-radius:8px; padding:7px 8px; background:var(--white); width:100%;
+    }
+    .slot textarea { min-height:44px; resize:vertical; }
+    .empty { color:var(--muted); font-style:italic; padding:8px; }
+    pre { margin:0; white-space:pre-wrap; word-break:break-word; max-height:260px; overflow:auto; background:var(--cream); border:1px solid var(--mist); border-radius:8px; padding:8px; }
+    .posts { display:grid; gap:12px; grid-template-columns:1fr; }
+    @media (min-width:960px) { .posts { grid-template-columns:1fr 1fr; } }
+    .note { font-size:12px; background:var(--white); border:1px dashed var(--eucalyptus); border-radius:10px; padding:8px 12px; }
+    a { color:var(--eucalyptus); }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <p class="kicker">INT6137 L03 · 真抽取（不是剧本页，也不是 L02 玻璃箱）</p>
+    <h1>全靠密钥：你打字，模型聊，模型抽</h1>
+    <p class="lede">没有课堂剧本。发送和抽取都走端点。荧光笔只在抽取之后出现：卡片 value 若在同学原句里出现，才标黄。</p>
+    <p class="warn">必须填密钥和端点，否则按钮是灰的。密钥只放本页，不要进 git。</p>
+
+    <section class="connect" aria-label="连接">
+      <label for="endpoint">端点</label>
+      <input id="endpoint" type="text" value="https://openrouter.ai/api/v1/chat/completions" />
+      <label for="apikey">密钥</label>
+      <input id="apikey" type="password" placeholder="必填 · Bearer 用的 key" autocomplete="off" />
+      <label for="model">模型</label>
+      <input id="model" type="text" value="qwen/qwen-2.5-7b-instruct" />
+      <label for="turns">这一发轮次</label>
+      <input id="turns" type="number" min="1" max="99" placeholder="全部" />
+    </section>
+
+    <ol class="pipe" id="pipe">
+      <li class="step" data-step="1"><b>1 · history</b>你打的字进记录，卡片不动</li>
+      <li class="step" data-step="2"><b>2 · 抽取 POST</b>schema 说明 + 对话；不聊天</li>
+      <li class="step" data-step="3"><b>3 · values</b>模型按名称填格</li>
+      <li class="step" data-step="4"><b>4 · inject</b>只带已填的 <code>&lt;state name&gt;</code></li>
+      <li class="step" data-step="5"><b>5 · chat POST</b>模型只看见这一发</li>
+    </ol>
+
+    <div class="toolbar">
+      <button type="button" id="extract">抽取</button>
+      <button type="button" class="alt" id="add-slot">加一格</button>
+      <button type="button" class="alt" id="defaults">恢复默认格</button>
+      <button type="button" class="alt" id="reset">重置对话</button>
+      <span class="beat" id="beat-label">0 轮 · 需要密钥</span>
+    </div>
+    <p class="hint" id="status">填密钥后：先在下面打字发送，再点抽取。两次都是真 POST。</p>
+    <p class="err" id="error"></p>
+
+    <div class="grid">
+      <section class="card history">
+        <h2>1 · history</h2>
+        <p class="hint">黄标 = 抽取后的 value 在原句里对上了。淡的气泡 = 超出轮次上限，不进 POST。</p>
+        <div class="log" id="log"></div>
+        <div class="composer">
+          <label class="hint" for="composer">同学说</label>
+          <textarea id="composer" rows="3" placeholder="例如：我姓陈。先订两位。"></textarea>
+          <button type="button" id="send">发送（chat POST）</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2>schema + values</h2>
+        <p class="hint">名称和说明可改。value 由抽取模型写，不是剧本。</p>
+        <div id="slots"></div>
+        <p class="hint" id="delta">还没抽取。value 是空的。</p>
+      </section>
+      <section class="card">
+        <h2>5 · 这一发 chat POST</h2>
+        <p class="hint">没有对应 <code>&lt;state&gt;</code> = 那一格没注入。</p>
+        <pre id="chat-post"></pre>
+      </section>
+    </div>
+    <div class="posts">
+      <section class="card">
+        <h2>2 · 抽取 POST</h2>
+        <p class="hint">另一次请求。HTTP <span id="httpstatus">尚未请求</span>。请求头带 <code>Authorization: Bearer</code>，密钥不进 JSON。</p>
+        <pre id="extract-post"></pre>
+      </section>
+      <section class="card">
+        <h2>4 · 注入了什么</h2>
+        <p class="hint">每个已填的格一条。不是整份带 null 的 JSON。</p>
+        <pre id="injected"></pre>
+      </section>
+    </div>
+    <p class="note">剧本投影页：<a href="./state-extract-demo.html">state-extract-demo.html</a>。备课：<a href="./HISTORY-STATE-MEMORY.md">HISTORY-STATE-MEMORY.md</a>。L02 玻璃箱：<a href="https://enoch-sit.github.io/int6137-l02-chatbot/l02-chatbot.html">l02-chatbot.html</a>。</p>
+  </main>
+  <script>
+    var DEFAULT_SLOTS = [
+      { key: 'name', description: '用户怎么称呼自己。更正以最后一次为准。没说过就留空。', value: '' },
+      { key: 'summary', description: '必须记住的情节：人数、菜系、过敏、时间。寒暄不要写。更正覆盖旧值。', value: '' }
+    ];
+
+    var msgs = [];
+    var slots = cloneSlots(DEFAULT_SLOTS);
+    var busy = false;
+
+    function cloneSlots(list) {
+      return list.map(function (s) {
+        return { key: s.key, description: s.description, value: s.value };
+      });
+    }
+
+    function $(id) { return document.getElementById(id); }
+
+    function hasAuth() {
+      return Boolean($('apikey').value.trim() && $('endpoint').value.trim());
+    }
+
+    function slotKey(s, i) {
+      var k = String(s.key || '').trim();
+      return k || ('slot' + (i + 1));
+    }
+
+    function filledParts() {
+      return slots.map(function (s, i) {
+        var v = String(s.value || '').trim();
+        if (!v || v === 'null') return null;
+        return { key: slotKey(s, i), value: v };
+      }).filter(Boolean);
+    }
+
+    function injectXml() {
+      return filledParts().map(function (p) {
+        return '<state name="' + p.key.replace(/"/g, '') + '">\n' + p.value + '\n</state>';
+      }).join('\n');
+    }
+
+    function shapeText() {
+      return slots.map(function (s, i) { return slotKey(s, i) + ':'; }).join('\n');
+    }
+
+    function schemaText() {
+      return slots.map(function (s, i) {
+        return slotKey(s, i) + ' — ' + String(s.description || '').trim();
+      }).join('\n');
+    }
+
+    function cardText() {
+      return slots.map(function (s, i) {
+        return slotKey(s, i) + ': ' + String(s.value || '');
+      }).join('\n');
+    }
+
+    function turnCount() {
+      var n = 0;
+      for (var i = 0; i < msgs.length; i++) if (msgs[i].role === 'user') n += 1;
+      return n;
+    }
+
+    function windowSize() {
+      var raw = $('turns').value.trim();
+      var spoken = turnCount();
+      if (!raw) return spoken;
+      var n = parseInt(raw, 10);
+      if (!isFinite(n) || n < 1) return spoken;
+      return Math.min(n, spoken);
+    }
+
+    function windowedHistory() {
+      var keep = windowSize();
+      if (!keep) return [];
+      var users = 0;
+      var start = 0;
+      for (var i = msgs.length - 1; i >= 0; i--) {
+        if (msgs[i].role !== 'user') continue;
+        users += 1;
+        if (users === keep) {
+          start = i;
+          break;
+        }
+      }
+      return msgs.slice(start);
+    }
+
+    function droppedCount() {
+      return Math.max(0, turnCount() - windowSize());
+    }
+
+    function transcript() {
+      var slice = windowedHistory();
+      if (!slice.length) return '（空）';
+      var lines = slice.map(function (m) { return m.role + ': ' + m.content; });
+      var dropped = droppedCount();
+      if (dropped) lines.unshift('（更早的 ' + dropped + ' 轮不在这一发）');
+      return lines.join('\n');
+    }
+
+    function chatMessages() {
+      var sys = '你是订位助手。用中文简短回答。只根据这一发里的 messages 和 <state> 回答。不要假装记得没注入、也没出现在这一发里的事。';
+      var block = injectXml();
+      if (block) sys += '\n' + block;
+      return [{ role: 'system', content: sys }].concat(windowedHistory());
+    }
+
+    function extractMessages() {
+      var sys = '你只做抽取。不要聊天。按名称把整张卡片重写。说明告诉你每一格要什么。没出现的槽位留空。更正以最后一次为准。不要编造。只输出卡片正文，每行 key: value。\n\n结构：\n' + shapeText() + '\n\n说明：\n' + schemaText();
+      var user = '当前卡片：\n' + cardText() + '\n\n对话记录：\n' + transcript();
+      return [
+        { role: 'system', content: sys },
+        { role: 'user', content: user }
+      ];
+    }
+
+    function modelName() {
+      return $('model').value.trim() || 'qwen/qwen-2.5-7b-instruct';
+    }
+
+    function chatBody() {
+      return { model: modelName(), temperature: 0.3, stream: false, messages: chatMessages() };
+    }
+
+    function extractBody() {
+      return { model: modelName(), temperature: 0, stream: false, messages: extractMessages() };
+    }
+
+    function authHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + $('apikey').value.trim(),
+        'HTTP-Referer': String(location.origin || ''),
+        'X-Title': 'INT6137 L03 live extract'
+      };
+    }
+
+    function setPipe(n) {
+      var nodes = document.querySelectorAll('#pipe .step');
+      for (var i = 0; i < nodes.length; i++) {
+        nodes[i].classList.toggle('on', Number(nodes[i].getAttribute('data-step')) === n);
+      }
+    }
+
+    function showError(msg) { $('error').textContent = msg || ''; }
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function highlightHtml(text) {
+      var html = escapeHtml(text);
+      var needles = filledParts().map(function (p) { return p.value; })
+        .filter(function (v) { return v.length >= 1 && v.length <= 40; });
+      needles.sort(function (a, b) { return b.length - a.length; });
+      needles.forEach(function (v) {
+        var needle = escapeHtml(v);
+        if (!needle) return;
+        var esc = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        html = html.replace(new RegExp(esc, 'g'), '<mark>' + needle + '</mark>');
+      });
+      return html;
+    }
+
+    function paintLog() {
+      var log = $('log');
+      log.innerHTML = '';
+      if (!msgs.length) {
+        log.innerHTML = '<p class="empty">还没有句子。填密钥，在下面打字发送。</p>';
+        return;
+      }
+      var keep = windowedHistory();
+      var keepStart = msgs.length - keep.length;
+      var cutDone = false;
+      msgs.forEach(function (m, i) {
+        if (!cutDone && keepStart > 0 && i === keepStart) {
+          var cut = document.createElement('p');
+          cut.className = 'cut';
+          cut.textContent = '↑ 以上不进这一发 · 下面才进 POST';
+          log.appendChild(cut);
+          cutDone = true;
+        }
+        var el = document.createElement('div');
+        el.className = 'bubble ' + (m.role === 'user' ? 'user' : 'bot') + (i < keepStart ? ' dropped' : '');
+        var who = m.role === 'user' ? '同学' : '店员';
+        var body = m.role === 'user' ? highlightHtml(m.content) : escapeHtml(m.content);
+        el.innerHTML = '<span class="who">' + who + '</span>' + body;
+        log.appendChild(el);
+      });
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function readSlotsFromDom() {
+      var blocks = document.querySelectorAll('#slots .slot');
+      for (var i = 0; i < blocks.length; i++) {
+        if (!slots[i]) continue;
+        var keyEl = blocks[i].querySelector('[data-f="key"]');
+        var descEl = blocks[i].querySelector('[data-f="description"]');
+        var valEl = blocks[i].querySelector('[data-f="value"]');
+        if (keyEl) slots[i].key = keyEl.value;
+        if (descEl) slots[i].description = descEl.value;
+        if (valEl) slots[i].value = valEl.value;
+      }
+    }
+
+    function paintSlots(prevValues) {
+      var host = $('slots');
+      host.innerHTML = '';
+      slots.forEach(function (s, i) {
+        var wrap = document.createElement('div');
+        wrap.className = 'slot';
+        if (prevValues && String(prevValues[i] || '') !== String(s.value || '')) wrap.className += ' changed';
+        wrap.innerHTML =
+          '<div class="row"><label>名称</label><input data-f="key" spellcheck="false" /></div>' +
+          '<div class="row"><label>说明</label><textarea data-f="description" rows="2"></textarea></div>' +
+          '<div class="row"><label>value</label><textarea data-f="value" rows="2" placeholder="（空 = 这一发不带）"></textarea></div>';
+        wrap.querySelector('[data-f="key"]').value = s.key;
+        wrap.querySelector('[data-f="description"]').value = s.description;
+        wrap.querySelector('[data-f="value"]').value = s.value;
+        host.appendChild(wrap);
+      });
+      host.querySelectorAll('input, textarea').forEach(function (el) {
+        el.addEventListener('input', function () {
+          readSlotsFromDom();
+          paintLog();
+          paintPosts();
+        });
+      });
+    }
+
+    function paintPosts() {
+      $('chat-post').textContent = JSON.stringify(chatBody(), null, 2);
+      $('extract-post').textContent = msgs.length
+        ? JSON.stringify(extractBody(), null, 2)
+        : '（先发送一句再抽取。这次请求不会出现在气泡里。）';
+      var xml = injectXml();
+      $('injected').textContent = xml || '（没有已填的格 → 这一发不带 <state>。）';
+    }
+
+    function paintChrome() {
+      var n = turnCount();
+      var auth = hasAuth();
+      $('beat-label').textContent = auth
+        ? (n + ' 轮 · 这一发 ' + windowSize() + ' 轮')
+        : (n + ' 轮 · 需要密钥');
+      $('send').disabled = busy || !auth;
+      $('extract').disabled = busy || !auth || !msgs.length;
+    }
+
+    function paint(prevValues) {
+      paintLog();
+      paintSlots(prevValues);
+      paintPosts();
+      paintChrome();
+    }
+
+    function parseExtracted(text) {
+      var raw = String(text || '').trim();
+      var map = {};
+      if (raw.charAt(0) === '{') {
+        try {
+          var obj = JSON.parse(raw);
+          if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+            Object.keys(obj).forEach(function (k) { map[k] = String(obj[k] == null ? '' : obj[k]); });
+          }
+        } catch (e) { /* fall through */ }
+      }
+      raw.split(/\n/).forEach(function (line) {
+        var idx = line.indexOf(':');
+        if (idx < 1) return;
+        map[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+      });
+      slots.forEach(function (s, i) {
+        var k = slotKey(s, i);
+        if (Object.prototype.hasOwnProperty.call(map, k)) s.value = map[k];
+      });
+    }
+
+    function assistantContent(data) {
+      if (data && data.choices && data.choices[0] && data.choices[0].message) {
+        return String(data.choices[0].message.content || '');
+      }
+      return String(data && data.output_text ? data.output_text : '');
+    }
+
+    async function postJson(body) {
+      var res = await fetch($('endpoint').value.trim(), {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(body)
+      });
+      var raw = await res.text();
+      var data;
+      try { data = JSON.parse(raw); } catch (err) {
+        throw new Error('响应不是 JSON：' + raw.slice(0, 180));
+      }
+      if (data && data.error) {
+        throw new Error(data.error.message || JSON.stringify(data.error));
+      }
+      if (!(res.status >= 200 && res.status < 300)) {
+        throw new Error('HTTP ' + res.status + '：' + raw.slice(0, 180));
+      }
+      return { res: res, data: data };
+    }
+
+    async function sendNow() {
+      if (busy || !hasAuth()) return;
+      var text = $('composer').value.trim();
+      if (!text) return;
+      readSlotsFromDom();
+      showError('');
+      msgs.push({ role: 'user', content: text });
+      $('composer').value = '';
+      setPipe(1);
+      paint(null);
+      busy = true;
+      paintChrome();
+      $('httpstatus').textContent = 'chat 请求中…';
+      try {
+        setPipe(5);
+        paintPosts();
+        var out = await postJson(chatBody());
+        $('httpstatus').textContent = 'chat HTTP ' + out.res.status;
+        msgs.push({ role: 'assistant', content: assistantContent(out.data) || '（空回复）' });
+        $('status').textContent = 'chat POST 已返回。卡片还没动，除非你再点抽取。';
+        $('delta').textContent = 'history 变了，values 还停在抽取前。';
+        paint(null);
+      } catch (err) {
+        msgs.pop();
+        failNet(err);
+        paint(null);
+      } finally {
+        busy = false;
+        paintChrome();
+      }
+    }
+
+    async function extractNow() {
+      if (busy || !hasAuth() || !msgs.length) return;
+      readSlotsFromDom();
+      showError('');
+      setPipe(2);
+      paintPosts();
+      busy = true;
+      paintChrome();
+      $('httpstatus').textContent = '抽取请求中…';
+      try {
+        var out = await postJson(extractBody());
+        $('httpstatus').textContent = '抽取 HTTP ' + out.res.status;
+        var prev = slots.map(function (s) { return s.value; });
+        parseExtracted(assistantContent(out.data));
+        $('delta').textContent = '真抽取完成。没有新气泡。黄标 = value 在同学原句里对上了。';
+        $('status').textContent = '抽取 POST 已返回。下一发 chat 只带已填的格。';
+        setPipe(5);
+        paint(prev);
+      } catch (err) {
+        failNet(err);
+        setPipe(2);
+      } finally {
+        busy = false;
+        paintChrome();
+      }
+    }
+
+    function failNet(err) {
+      var msg = String(err && err.message ? err.message : err);
+      if (/Failed to fetch|NetworkError|CORS/i.test(msg)) {
+        msg = '网络/CORS 失败：端点必须允许浏览器跨域。OpenRouter 一般可以。没有剧本可退。';
+      }
+      showError(msg);
+      $('httpstatus').textContent = '请求失败';
+    }
+
+    $('send').onclick = function () { sendNow(); };
+    $('extract').onclick = function () { extractNow(); };
+    $('composer').addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' && !ev.shiftKey) {
+        ev.preventDefault();
+        sendNow();
+      }
+    });
+
+    $('add-slot').onclick = function () {
+      readSlotsFromDom();
+      slots.push({ key: 'slot' + (slots.length + 1), description: '从对话抽出这一格。没出现就留空。', value: '' });
+      paint(null);
+    };
+
+    $('defaults').onclick = function () {
+      var vals = slots.map(function (s) { return s.value; });
+      slots = cloneSlots(DEFAULT_SLOTS);
+      if (vals[0]) slots[0].value = vals[0];
+      if (vals[1]) slots[1].value = vals[1];
+      paint(null);
+    };
+
+    $('reset').onclick = function () {
+      msgs = [];
+      slots.forEach(function (s) { s.value = ''; });
+      showError('');
+      $('status').textContent = '对话已清空。schema 还在。密钥还在。';
+      $('delta').textContent = '还没抽取。value 是空的。';
+      $('httpstatus').textContent = '尚未请求';
+      setPipe(0);
+      paint(null);
+    };
+
+    ['apikey', 'endpoint', 'model', 'turns'].forEach(function (id) {
+      $(id).addEventListener('input', function () {
+        paintPosts();
+        paintChrome();
+        if (id === 'turns') paintLog();
+      });
+    });
+
+    paint(null);
+  </script>
+</body>
+</html>
